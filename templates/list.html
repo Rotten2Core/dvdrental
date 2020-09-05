@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+    {% include 'header.html' %}
+    <table border="1">
+    {% for row in data %}
+        <tr>
+            {% for value in row.values() %}
+                <td>{{ format_value(value) }}</td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+    </table>
+</body>
+</html>
