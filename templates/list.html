@@ -6,14 +6,23 @@
 </head>
 <body>
     {% include 'header.html' %}
+    <a href="{{ format_get_params(page=page - 1) }}">prev page</a>
+    <a href="{{ format_get_params(page=page + 1) }}">next page</a>
     <table border="1">
-    {% for row in data %}
         <tr>
-            {% for value in row.values() %}
-                <td>{{ format_value(value) }}</td>
-            {% endfor %}
+            <th><a href="?sort=id">ID</a></th>
+            <th><a href="{{ format_get_params(sort='first_name') }}">First name</a></th>
+            <th><a href="?sort=last_name">Last name</a></th>
+            <th><a href="?sort=last_update">Last updated</a></th>
         </tr>
-    {% endfor %}
+        {% for actor in data %}
+            <tr>
+                <td>{{ actor.actor_id }}</td>
+                <td>{{actor.first_name}}</td>
+                <td>{{actor.last_name}}</td>
+                <td>{{actor.last_update}}</td>
+            </tr>
+        {% endfor %}
     </table>
 </body>
 </html>
