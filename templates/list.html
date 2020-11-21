@@ -6,21 +6,29 @@
 </head>
 <body>
     {% include 'header.html' %}
-    <a href="{{ format_get_params(page=page - 1) }}">prev page</a>
-    <a href="{{ format_get_params(page=page + 1) }}">next page</a>
+    {% if page != 1 %}
+        <a href="{{ format_get_params(page=page - 1) }}">prev page</a>
+    {% endif %}
+    {% if page != (count // per_page + 1 if count % per_page > 0 else 0) %}
+        <a href="{{ format_get_params(page=page + 1) }}">next page</a>
+    {% endif %}
     <table border="1">
         <tr>
-            <th><a href="?sort=id">ID</a></th>
-            <th><a href="{{ format_get_params(sort='first_name') }}">First name</a></th>
-            <th><a href="?sort=last_name">Last name</a></th>
-            <th><a href="?sort=last_update">Last updated</a></th>
+            {% for key, title in header.items() %}
+                <th>
+                    {% if key in sort_keys %}
+                        <a href="{{ format_get_params(sort=key) }}">{{ title }}</a>
+                    {% else %}
+                        {{ title }}
+                    {% endif %}
+                </th>
+            {% endfor %}
         </tr>
-        {% for actor in data %}
+        {% for row in data %}
             <tr>
-                <td>{{ actor.actor_id }}</td>
-                <td>{{actor.first_name}}</td>
-                <td>{{actor.last_name}}</td>
-                <td>{{actor.last_update}}</td>
+                {% for key in header %}
+                    <td>{{ row | attr(key) }}</td>
+                {% endfor %}
             </tr>
         {% endfor %}
     </table>

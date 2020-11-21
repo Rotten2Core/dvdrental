@@ -1,8 +1,7 @@
 import os
 
 from flask import Flask, render_template, request
-from flask_sqlalchemy import SQLAlchemy
-
+from flask_sqlalchemy import BaseQuery, SQLAlchemy
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_CONN')
@@ -36,21 +35,50 @@ def utility_processor():
     return dict(format_value=format_value, format_get_params=format_get_params)
 
 
+def paginate_list(sort_keys, header):
+    def wrapper(func):
+        def inner_wrapper(*args, **kwargs):
+            sort = request.args.get('sort', 'actor_id')
+            page = max(int(request.args.get('page', 1)), 1)
+            per_page = min(int(request.args.get('per_page', 25)), 100)
+            offset = per_page * (page - 1)
+
+            query: BaseQuery = func(*args, **kwargs)
+            data = query.order_by(
+                sort_keys.get(sort, sort_keys['actor_id']),
+            ).limit(
+                per_page,
+            ).offset(
+                offset,
+            ).all()
+            count = query.count()
+
+            return render_template(
+                'list.html',
+                header=header,
+                sort_keys=sort_keys,
+                data=data,
+                count=count,
+                page=page,
+                per_page=per_page,
+            )
+
+        return inner_wrapper
+
+    return wrapper
+
+
 @app.route('/actors/')
-def actor():
-    sort_keys = {
-        'id': Actor.actor_id,
-        'first_name': Actor.first_name,
-        'last_name': Actor.last_name,
-        'last_update': Actor.last_update,
-    }
-    sort = request.args.get('sort', 'id')
-    page = int(request.args.get('page', 1))
-    if page <= 0:
-        page = 1
-
-    page_size = int(request.args.get('page_size', 25))
-    offset = page_size * (page - 1)
-    actors = Actor.query.order_by(sort_keys.get(sort, sort_keys['id'])).limit(25).offset(offset).all()
-
-    return render_template('list.html', title='Actors', data=actors, page=page, sort=sort)
+@paginate_list({
+    'actor_id': Actor.actor_id,
+    'first_name': Actor.first_name,
+    'last_name': Actor.last_name,
+    'last_update': Actor.last_update,
+}, {
+    'actor_id': 'ID',
+    'first_name': 'First name',
+    'last_name': 'Last name',
+    'last_update': 'Last update',
+})
+def actors() -> BaseQuery:
+    return Actor.query
