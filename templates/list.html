@@ -12,6 +12,20 @@
     {% if page != (count // per_page + 1 if count % per_page > 0 else 0) %}
         <a href="{{ format_get_params(page=page + 1) }}">next page</a>
     {% endif %}
+    <form method="get">
+        {% for key, value in format_get_params(_output='dict', page=1).items() %}
+            {% if key != 'per_page' %}
+                <input type="hidden" value="{{ value }}" name="{{ key }}">
+            {% endif %}
+        {% endfor %}
+        <select name="per_page" onchange="this.form.submit()">
+            {% for _per_page in (10, 25, 50, 100) %}
+                <option value="{{ _per_page }}" {{ 'selected' if per_page == _per_page else '' }}>
+                    {{ _per_page }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
     <table border="1">
         <tr>
             {% for key, title in header.items() %}

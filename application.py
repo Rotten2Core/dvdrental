@@ -1,4 +1,5 @@
 import os
+from typing import Dict, Union
 
 from flask import Flask, render_template, request
 from flask_sqlalchemy import BaseQuery, SQLAlchemy
@@ -23,14 +24,17 @@ def utility_processor():
 
         return value.strftime('%d.%m.%Y %H:%M:%S')
 
-    def format_get_params(**kwargs) -> str:
-        params = []
+    def format_get_params(_output='str', **kwargs) -> Union[str, Dict]:
+        params = {}
         request_args = dict(request.args)
         request_args.update(kwargs)
         for key, value in request_args.items():
-            params.append('{}={}'.format(key, value))
+            params[key] = value
 
-        return '?{}'.format('&'.join(params))
+        if _output == 'dict':
+            return params
+
+        return '?{}'.format('&'.join(f'{key}={value}' for key, value in params.items()))
 
     return dict(format_value=format_value, format_get_params=format_get_params)
 
@@ -68,7 +72,7 @@ def paginate_list(sort_keys, header):
     return wrapper
 
 
-@app.route('/actors/')
+@app.route('/actors/', methods=['GET'])
 @paginate_list({
     'actor_id': Actor.actor_id,
     'first_name': Actor.first_name,
