@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+    {% include 'header.html' %}
+    {% if not edit_fields %}
+        <a href="edit">Edit</a>
+    {% else %}
+        <a href="../">Cancel</a>
+        <form method="post">
+            <input type="submit" value="Save">
+    {% endif %}
+    <table border="1">
+        <tr>
+            <th>Field name</th>
+            <th>Field value</th>
+        </tr>
+        {% for key, label in titles.items() %}
+            <tr>
+                <td>{{ label }}</td>
+                <td>
+                    {% if edit_fields and key in edit_fields %}
+                        <input value="{{ data | attr(key) }}" name="{{ key }}">
+                    {% else %}
+                        {{ data | attr(key) }}
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+    {% if edit_fields %}
+        </form>
+    {% endif %}
+
+</body>
+</html>

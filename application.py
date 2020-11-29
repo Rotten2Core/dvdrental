@@ -1,12 +1,13 @@
 import os
 from typing import Dict, Union
 
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request
 from flask_sqlalchemy import BaseQuery, SQLAlchemy
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_CONN')
-db = SQLAlchemy(app)
+app.config['SQLALCHEMY_ECHO'] = True
+db = SQLAlchemy(app, session_options={'autocommit': True})
 
 
 class Actor(db.Model):
@@ -41,7 +42,7 @@ def utility_processor():
 
 def paginate_list(sort_keys, header):
     def wrapper(func):
-        def inner_wrapper(*args, **kwargs):
+        def list_inner_wrapper(*args, **kwargs):
             sort = request.args.get('sort', 'actor_id')
             page = max(int(request.args.get('page', 1)), 1)
             per_page = min(int(request.args.get('per_page', 25)), 100)
@@ -67,7 +68,27 @@ def paginate_list(sort_keys, header):
                 per_page=per_page,
             )
 
-        return inner_wrapper
+        return list_inner_wrapper
+
+    return wrapper
+
+
+def render_item(titles):
+    def wrapper(func):
+        def item_inner_wrapper(*args, **kwargs):
+            data, edit_fields, redirect_url = func(*args, **kwargs)
+
+            if redirect_url is not None:
+                return redirect(redirect_url)
+
+            return render_template(
+                'item.html',
+                data=data,
+                titles=titles,
+                edit_fields=edit_fields,
+            )
+
+        return item_inner_wrapper
 
     return wrapper
 
@@ -86,3 +107,33 @@ def paginate_list(sort_keys, header):
 })
 def actors() -> BaseQuery:
     return Actor.query
+
+
+@app.route('/actors/<int:actor_id>/', methods=['GET'])
+@app.route('/actors/<int:actor_id>/edit/', methods=['GET', 'POST'])
+@render_item({
+    'actor_id': 'ID',
+    'first_name': 'First name',
+    'last_name': 'Last name',
+    'last_update': 'Last update',
+})
+def actor(actor_id):
+    data = Actor.query.get_or_404(actor_id)
+    edit_fields = ('first_name', 'last_name')
+
+    if request.url.endswith(('edit', 'edit/')):
+        if request.method == 'GET':
+            return data, edit_fields, None
+
+        if request.method == 'POST':
+            values = {
+                field: request.form[field]
+                for field in edit_fields
+                if field in request.form
+            }
+            if values:
+                Actor.query.filter(Actor.actor_id == actor_id).update(values)
+
+            return None, None, f'/actors/{actor_id}'
+
+    return data, None, None

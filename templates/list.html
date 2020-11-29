@@ -41,7 +41,11 @@
         {% for row in data %}
             <tr>
                 {% for key in header %}
-                    <td>{{ row | attr(key) }}</td>
+                    {% if key.endswith('id') %}
+                        <td><a href="{{ row | attr(key) }}">{{ row | attr(key) }}</a></td>
+                    {% else %}
+                        <td>{{ row | attr(key) }}</td>
+                    {% endif %}
                 {% endfor %}
             </tr>
         {% endfor %}
