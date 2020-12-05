@@ -9,6 +9,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_CONN')
 app.config['SQLALCHEMY_ECHO'] = True
 db = SQLAlchemy(app, session_options={'autocommit': True})
 
+TITLES = {
+    'actor_id': 'ID',
+    'first_name': 'First name',
+    'last_name': 'Last name',
+    'last_update': 'Last update',
+}
+
 
 class Actor(db.Model):
     actor_id = db.Column(db.Integer, primary_key=True)
@@ -76,16 +83,12 @@ def paginate_list(sort_keys, header):
 def render_item(titles):
     def wrapper(func):
         def item_inner_wrapper(*args, **kwargs):
-            data, edit_fields, redirect_url = func(*args, **kwargs)
-
-            if redirect_url is not None:
-                return redirect(redirect_url)
+            data = func(*args, **kwargs)
 
             return render_template(
                 'item.html',
                 data=data,
                 titles=titles,
-                edit_fields=edit_fields,
             )
 
         return item_inner_wrapper
@@ -94,46 +97,44 @@ def render_item(titles):
 
 
 @app.route('/actors/', methods=['GET'])
-@paginate_list({
-    'actor_id': Actor.actor_id,
-    'first_name': Actor.first_name,
-    'last_name': Actor.last_name,
-    'last_update': Actor.last_update,
-}, {
-    'actor_id': 'ID',
-    'first_name': 'First name',
-    'last_name': 'Last name',
-    'last_update': 'Last update',
-})
+@paginate_list(
+    {
+        'actor_id': Actor.actor_id,
+        'first_name': Actor.first_name,
+        'last_name': Actor.last_name,
+        'last_update': Actor.last_update,
+    },
+    TITLES,
+)
 def actors() -> BaseQuery:
     return Actor.query
 
 
 @app.route('/actors/<int:actor_id>/', methods=['GET'])
+@render_item(TITLES)
+def get_actor(actor_id):
+    return Actor.query.get_or_404(actor_id)
+
+
 @app.route('/actors/<int:actor_id>/edit/', methods=['GET', 'POST'])
-@render_item({
-    'actor_id': 'ID',
-    'first_name': 'First name',
-    'last_name': 'Last name',
-    'last_update': 'Last update',
-})
-def actor(actor_id):
-    data = Actor.query.get_or_404(actor_id)
+def edit_actor(actor_id):
     edit_fields = ('first_name', 'last_name')
 
-    if request.url.endswith(('edit', 'edit/')):
-        if request.method == 'GET':
-            return data, edit_fields, None
+    if request.method == 'GET':
+        return render_template(
+            'item.html',
+            data=Actor.query.get_or_404(actor_id),
+            edit_fields=edit_fields,
+            titles=TITLES,
+        )
 
-        if request.method == 'POST':
-            values = {
-                field: request.form[field]
-                for field in edit_fields
-                if field in request.form
-            }
-            if values:
-                Actor.query.filter(Actor.actor_id == actor_id).update(values)
+    if request.method == 'POST':
+        values = {
+            field: request.form[field]
+            for field in edit_fields
+            if field in request.form
+        }
+        if values:
+            Actor.query.filter(Actor.actor_id == actor_id).update(values)
 
-            return None, None, f'/actors/{actor_id}'
-
-    return data, None, None
+        return redirect(f'/actors/{actor_id}')
