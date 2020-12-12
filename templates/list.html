@@ -12,6 +12,8 @@
     {% if page != (count // per_page + 1 if count % per_page > 0 else 0) %}
         <a href="{{ format_get_params(page=page + 1) }}">next page</a>
     {% endif %}
+    <a href="export/csv/">export data (csv)</a>
+    <a href="export/xlsx/">export data (xlsx)</a>
     <form method="get">
         {% for key, value in format_get_params(_output='dict', page=1).items() %}
             {% if key != 'per_page' %}

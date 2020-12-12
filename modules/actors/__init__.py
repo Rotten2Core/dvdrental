@@ -1,4 +1,9 @@
-from flask import Blueprint, redirect, render_template, request
+import datetime
+import io
+
+import xlsxwriter
+
+from flask import Blueprint, redirect, render_template, request, Response, stream_with_context
 
 from flask_sqlalchemy import BaseQuery
 
@@ -21,6 +26,22 @@ class Actor(db.Model):
     first_name = db.Column(db.String(45), nullable=False)
     last_name = db.Column(db.String(45), nullable=False)
     last_update = db.Column(db.DateTime(timezone=False), nullable=False)
+
+    def to_csv_row(self):
+        return f"""{','.join((
+            str(self.actor_id),
+            self.first_name,
+            self.last_name,
+            self.last_update.strftime('%d.%m.%Y %H:%M:%S'),
+        ))}\n"""
+
+    def to_xlsx_row(self):
+        return (
+            str(self.actor_id),
+            self.first_name,
+            self.last_name,
+            self.last_update.strftime('%d.%m.%Y %H:%M:%S'),
+        )
 
 
 @bp.route('/', methods=['GET'])
@@ -65,3 +86,40 @@ def edit_actor(actor_id):
             Actor.query.filter(Actor.actor_id == actor_id).update(values)
 
         return redirect(f'/actors/{actor_id}')
+
+
+@bp.route('/export/<file_extension>/', methods=['GET'])
+def actors_export(file_extension):
+    file_name = f'actors_list_{datetime.datetime.now()}.{file_extension}'
+    headers = {
+        'Content-Disposition': f"attachment;filename={file_name}"
+    }
+    mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if file_extension == 'xlsx' else 'text/csv'
+
+    def generate_csv():
+        actors_gen = Actor.query.yield_per(100)
+        yield from map(Actor.to_csv_row, actors_gen)
+
+    def generate_xlsx():
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        sheet = workbook.add_worksheet('Actors')
+        row = 0
+        for actor in Actor.query.yield_per(100):
+            sheet.write_row(row, 0, actor.to_xlsx_row())
+            row += 1
+
+        workbook.close()
+        headers['Content-Length'] = str(output.tell())
+        output.seek(0)
+
+        data = output.read(8192)
+        while data:
+            yield data
+            data = output.read(8192)
+
+    return Response(
+        stream_with_context(generate_xlsx() if file_extension == 'xlsx' else generate_csv()),
+        mimetype=mimetype,
+        headers=headers,
+    )

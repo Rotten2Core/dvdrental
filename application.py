@@ -30,3 +30,7 @@ def utility_processor():
         return '?{}'.format('&'.join(f'{key}={value}' for key, value in params.items()))
 
     return dict(format_value=format_value, format_get_params=format_get_params)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
