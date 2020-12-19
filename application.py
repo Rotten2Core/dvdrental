@@ -1,6 +1,5 @@
 from typing import Union, Dict
-from flask import Flask, request
-
+from flask import Flask, request, render_template
 
 app = Flask(__name__)
 
@@ -30,6 +29,11 @@ def utility_processor():
         return '?{}'.format('&'.join(f'{key}={value}' for key, value in params.items()))
 
     return dict(format_value=format_value, format_get_params=format_get_params)
+
+
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
