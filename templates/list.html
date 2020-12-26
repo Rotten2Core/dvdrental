@@ -16,7 +16,7 @@
     <a href="export/xlsx/">export data (xlsx)</a>
     <form method="get">
         {% for key, value in format_get_params(_output='dict', page=1).items() %}
-            {% if key != 'per_page' %}
+            {% if key not in ['per_page', 'query'] %}
                 <input type="hidden" value="{{ value }}" name="{{ key }}">
             {% endif %}
         {% endfor %}
@@ -27,30 +27,35 @@
                 </option>
             {% endfor %}
         </select>
+        <input type="text" name="query" value="{{ request.args.get('query', '') }}">
     </form>
-    <table border="1">
-        <tr>
-            {% for key, title in header.items() %}
-                <th>
-                    {% if key in sort_keys %}
-                        <a href="{{ format_get_params(sort=key) }}">{{ title }}</a>
-                    {% else %}
-                        {{ title }}
-                    {% endif %}
-                </th>
-            {% endfor %}
-        </tr>
-        {% for row in data %}
+    {% if not data %}
+        <h3>No data to show</h3>
+    {% else %}
+        <table border="1">
             <tr>
-                {% for key in header %}
-                    {% if key.endswith('id') %}
-                        <td><a href="{{ row | attr(key) }}">{{ row | attr(key) }}</a></td>
-                    {% else %}
-                        <td>{{ row | attr(key) }}</td>
-                    {% endif %}
+                {% for key, title in header.items() %}
+                    <th>
+                        {% if key in sort_keys %}
+                            <a href="{{ format_get_params(sort=key) }}">{{ title }}</a>
+                        {% else %}
+                            {{ title }}
+                        {% endif %}
+                    </th>
                 {% endfor %}
             </tr>
-        {% endfor %}
-    </table>
+            {% for row in data %}
+                <tr>
+                    {% for key in header %}
+                        {% if key.endswith('id') %}
+                            <td><a href="{{ row | attr(key) }}">{{ row | attr(key) }}</a></td>
+                        {% else %}
+                            <td>{{ row | attr(key) }}</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
 </body>
 </html>

@@ -1,7 +1,6 @@
 from flask import Blueprint, redirect, render_template, request
-from flask_sqlalchemy import BaseQuery
 
-from common import paginate_list, render_item, AbstractModel, export_data
+from common import paginate_list, render_item, AbstractModel, export_data, filter_list
 from db import get_db
 
 bp = Blueprint('actors', __name__, url_prefix='/actors')
@@ -50,8 +49,9 @@ class Actor(AbstractModel):
     },
     Actor.titles(),
 )
-def actors() -> BaseQuery:
-    return Actor.query
+@filter_list(Actor.first_name, Actor.last_name)
+def actors() -> AbstractModel:
+    return Actor
 
 
 @bp.route('/<int:actor_id>/', methods=['GET'])

@@ -4,6 +4,7 @@ from typing import Dict, Tuple
 
 from flask import render_template, request, Response, stream_with_context
 from flask_sqlalchemy import BaseQuery
+from sqlalchemy import or_
 from xlsx_streaming.render import _get_column_letter
 from xlsx_streaming.streaming import zip_to_zipstream
 from xlsx_streaming.xlsx_template import DEFAULT_TEMPLATE
@@ -25,6 +26,23 @@ class AbstractModel(DB.Model):
     @staticmethod
     def titles() -> Dict[str, str]:
         raise NotImplementedError()
+
+
+def filter_list(*fields):
+    def wrapper(func):
+        def filter_inner_wrapper(*args, **kwargs):
+            model: AbstractModel = func(*args, **kwargs)
+            search_query = request.args.get('query')
+            if search_query in (None, ''):
+                return model.query
+
+            return model.query.filter(or_(
+                field.ilike('{}%'.format(search_query)) for field in fields
+            ))
+
+        return filter_inner_wrapper
+
+    return wrapper
 
 
 def paginate_list(sort_keys, header):
